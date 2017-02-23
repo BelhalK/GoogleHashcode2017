@@ -1,4 +1,4 @@
 class video(object):
 	def __init__(self, idx, size):
-		self.id = idx 
+		self.idx = idx 
 		self.size = size
