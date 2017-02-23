@@ -13,7 +13,6 @@ def create_cacheservers(C,X):
         cserver_list += [cserver]
     return cserver_list
 
-
 def create_videos(V,video_sizes):
     vid_list = []
     for i in range(V):
@@ -27,6 +26,13 @@ def create_requests(R,RV_list,RE_list,RN_list):
         req = request(RE_list[i],RV_list[i],RN_list[i])
         req_list += [req]
     return req_list
+
+def create_endpoints(E,LD_list):
+    end_list = []
+    for i in range(R):
+        end = endpoint(i,LD_list[i])
+        end_list += [end]
+    return end_list
 
 def read_data(title):
     # reads title
@@ -95,6 +101,7 @@ V,E,R,C,X,video_sizes,LD_list,K_list,caches_list,RV_list,RE_list,RN_list = read_
 cacheserver_list = create_cacheservers(C,X)
 video_list = create_videos(V,video_sizes)
 request_list = create_requests(R,RV_list,RE_list,RN_list)
+endpoint_list = create_endpoints(E,LD_list)
 
 
 #remplir
