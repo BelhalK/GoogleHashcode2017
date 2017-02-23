@@ -108,10 +108,19 @@ endpoint_list = create_endpoints(E,LD_list,caches_list)
 
 
 #remplir
-list_of_requests = [] #size E x V
 list_of_best_caches = [] #size E x V, correspond
 list_of_best_L = [] #size E x V
 list_of_L = [] #size E x V
+
+for request in list_of_requests:
+    v = request.videoid
+    e = request.endpointidx
+    L_best,cacheserverId = endpoints_list(e).findbestcache(v, video_list,cacheserver_list)
+    L_current = getcurrentlatency(v, cacheserver_list)[0]
+    list_of_best_caches.append(cacheserverId)
+    list_of_best_L.append(L_best)
+    list_of_L.append(L_current)
+
 
 #Construire le dataframe de tous les triplets (cout,endpoint,video)
 request_obj = [list_of_requests[i].value*(list_of_best_L[i] - list_of_L[i]) for i in range(len(list_of_requests))]

@@ -8,7 +8,7 @@ class endpoint(object):
 		self.cacheservers+=[cacheserverid]
 
 	def findbestcache(self, videoid, videos, listcacheserver):
-		#tester trouve la meilleure latency possible (capacité et connectivité)
+		#tester trouve la meilleure latency possible
 		L=latency_datacenter
 		bestCacheserverId=-1
 		for c in cacheservers:
