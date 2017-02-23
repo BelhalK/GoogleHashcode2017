@@ -3,7 +3,22 @@
 import numpy as np
 import pandas as pd
 
-def create_cacheservers():
+def create_cacheservers(C,X):
+    cserver_list = []
+    for i in range(C):
+        cserver = cacheserver(i,X)
+        cserver_list += [cserver]
+    return cserver_list
+
+
+def create_videos(V,video_sizes):
+    vid_list = []
+    for i in range(C):
+        vid = video(i,video_sizes[i])
+        vid_list += [vid]
+    return vid_list
+
+
 
 
 def read_data(title):
@@ -53,11 +68,11 @@ def read_data(title):
 
 
 
-    return V,E,R,C,X,LD_list,K_list,caches_list,RV_list,RE_list,RN_list
+    return V,E,R,C,X,video_list,LD_list,K_list,caches_list,RV_list,RE_list,RN_list
 
 #remplir
 list_of_requests = [] #size E x V
-list_of_best_caches = [] #size E x V, correspond 
+list_of_best_caches = [] #size E x V, correspond
 list_of_best_L = [] #size E x V
 list_of_L = [] #size E x V
 
