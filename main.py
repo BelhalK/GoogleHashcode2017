@@ -112,10 +112,11 @@ list_of_best_caches = [] #size E x V, correspond
 list_of_best_L = [] #size E x V
 list_of_L = [] #size E x V
 
-for request in list_of_requests:
-    v = request.videoid
-    e = request.endpointidx
-    L_best,cacheserverId = endpoints_list(e).findbestcache(v, video_list,cacheserver_list)
+for request in request_list:
+    v = request.video
+    e = request.endpoint
+    print(endpoint_list[e].idx,endpoint_list[e].latency_datacenter)
+    L_best,cacheserverId = endpoint_list[e].findbestcache(v, video_list,cacheserver_list)
     L_current = getcurrentlatency(v, cacheserver_list)[0]
     list_of_best_caches.append(cacheserverId)
     list_of_best_L.append(L_best)

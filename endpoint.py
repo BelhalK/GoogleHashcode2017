@@ -9,9 +9,10 @@ class endpoint(object):
 
 	def findbestcache(self, videoid, videos, listcacheserver):
 		#tester trouve la meilleure latency possible
-		L=latency_datacenter
+		print(self.latency_datacenter)
+		L = self.latency_datacenter
 		bestCacheserverId=-1
-		for c in cacheservers:
+		for c in self.cacheservers:
 			if listofcacheservers[c[0]].can_add_video_or_video_already_in(videoid,videos):
 				if c[1]>L:
 					L=c[1]
@@ -20,7 +21,7 @@ class endpoint(object):
 
 	def getcurrentlatency(self, videoid, listcacheservers):
 		#calcule la latency actuel pour la videoid
-		L=latency_datacenter
+		L=self.latency_datacenter
 		cacheserverId=-1
 		for c in self.cacheservers:
 			if listofcacheservers[c[0]].isvideoinside(videoid):
