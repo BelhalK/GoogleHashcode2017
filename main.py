@@ -4,7 +4,12 @@ import numpy as np
 import pandas as pd
 from cacheserver import *
 from video import *
+from request import *
 
+V,E,R,C,X,video_sizes,LD_list,K_list,caches_list,RV_list,RE_list,RN_list = read_data('kittens.in')
+cacheserver_list = create_cacheservers(C,X)
+video_list = create_videos(V,video_sizes)
+request_list = create_requests(R,RV_list,RE_list,RN_list)
 
 def create_cacheservers(C,X):
     cserver_list = []
@@ -27,8 +32,6 @@ def create_requests(R,RV_list,RE_list,RN_list):
         req = request(RE_list[i],RV_list[i],RN_list[i])
         req_list += [req]
     return req_list
-
-
 
 def read_data(title):
     # reads title
@@ -77,7 +80,7 @@ def read_data(title):
 
 
 
-    return V,E,R,C,X,video_list,LD_list,K_list,caches_list,RV_list,RE_list,RN_list
+    return V,E,R,C,X,video_sizes,LD_list,K_list,caches_list,RV_list,RE_list,RN_list
 
 #remplir
 list_of_requests = [] #size E x V
