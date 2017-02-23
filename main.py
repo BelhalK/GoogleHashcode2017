@@ -6,11 +6,6 @@ from cacheserver import *
 from video import *
 from request import *
 
-V,E,R,C,X,video_sizes,LD_list,K_list,caches_list,RV_list,RE_list,RN_list = read_data('kittens.in')
-cacheserver_list = create_cacheservers(C,X)
-video_list = create_videos(V,video_sizes)
-request_list = create_requests(R,RV_list,RE_list,RN_list)
-
 def create_cacheservers(C,X):
     cserver_list = []
     for i in range(C):
@@ -82,6 +77,26 @@ def read_data(title):
 
     return V,E,R,C,X,video_sizes,LD_list,K_list,caches_list,RV_list,RE_list,RN_list
 
+def write_sub(name,N,cacheserver_list):
+    file = open(name,'w')
+    file.write(str(N)+'\n')
+    for i in range(N):
+        cacheserver = cacheserver_list[i]
+        idx = cacheserver.idx
+        vids = cacheserver.videos
+        towrite = str(idx)
+        for vid in vids:
+            towrite += ' ' + str(vid.idx)
+        towrite += '\n'
+        file.write(towrite)
+
+
+V,E,R,C,X,video_sizes,LD_list,K_list,caches_list,RV_list,RE_list,RN_list = read_data('kittens.in')
+cacheserver_list = create_cacheservers(C,X)
+video_list = create_videos(V,video_sizes)
+request_list = create_requests(R,RV_list,RE_list,RN_list)
+
+
 #remplir
 list_of_requests = [] #size E x V
 list_of_best_caches = [] #size E x V, correspond
@@ -98,15 +113,9 @@ list_of_obj = pd.DataFrame(np.vstack((request_obj, request_endpoints, request_vi
 list_of_obj.sort('obj', inplace=True)
 
 
-def write_sub(name,N,cacheserver_list):
-    file = open(name,'w')
-    file.write(str(N)+'\n')
-    for i in range(N):
-        cacheserver = cacheserver_list[i]
-        idx = cacheserver.idx
-        vids = cacheserver.videos
-        towrite = str(idx)
-        for vid in vids:
-            towrite += ' ' + str(vid.idx)
-        towrite += '\n'
-        file.write(towrite)
+
+
+V,E,R,C,X,video_sizes,LD_list,K_list,caches_list,RV_list,RE_list,RN_list = read_data('kittens.in')
+cacheserver_list = create_cacheservers(C,X)
+video_list = create_videos(V,video_sizes)
+request_list = create_requests(R,RV_list,RE_list,RN_list)
