@@ -1,8 +1,12 @@
 #main.py
 
+def create_cacheservers():
+
+
 def read_data(title):
     # reads title
     # returns lists
+    # V,E,R,C,X
     # LD_list[i] is the LD of user i
     # K_list[i] is the K of user i
     # caches_list[i] is a list of the cacheserver values (id,latency)
@@ -46,8 +50,7 @@ def read_data(title):
 
 
 
-    return LD_list,K_list,caches_list,RV_list,RE_list,RN_list
-
+    return V,E,R,C,X,LD_list,K_list,caches_list,RV_list,RE_list,RN_list
 
 def write_sub(name,N,cacheserver_list):
     file = open(name,'w')
