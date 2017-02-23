@@ -5,6 +5,7 @@ import pandas as pd
 from cacheserver import *
 from video import *
 from request import *
+from endpoint import *
 
 def create_cacheservers(C,X):
     cserver_list = []
@@ -29,9 +30,9 @@ def create_requests(R,RV_list,RE_list,RN_list):
 
 def create_endpoints(E,LD_list,caches_list):
     end_list = []
-    for i in range(R):
+    for i in range(E):
         end = endpoint(i,LD_list[i])
-        for (c,Lc) in caches_list[i]
+        for (c,Lc) in caches_list[i]:
             end.addcacheserver(c,Lc)
         end_list += [end]
     return end_list
