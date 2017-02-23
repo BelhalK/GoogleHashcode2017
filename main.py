@@ -27,10 +27,12 @@ def create_requests(R,RV_list,RE_list,RN_list):
         req_list += [req]
     return req_list
 
-def create_endpoints(E,LD_list):
+def create_endpoints(E,LD_list,caches_list):
     end_list = []
     for i in range(R):
         end = endpoint(i,LD_list[i])
+        for (c,Lc) in caches_list[i]
+            end.addcacheserver(c,Lc)
         end_list += [end]
     return end_list
 
