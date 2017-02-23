@@ -47,3 +47,17 @@ def read_data(title):
 
 
     return LD_list,K_list,caches_list,RV_list,RE_list,RN_list
+
+
+def write_sub(name,N,cacheserver_list):
+    file = open(name,'w')
+    file.write(str(N)+'\n')
+    for i in range(N):
+        cacheserver = cacheserver_list[i]
+        idx = cacheserver.idx
+        vids = cacheserver.videos
+        towrite = str(idx)
+        for vid in vids:
+            towrite += ' ' + str(vid.idx)
+        towrite += '\n'
+        file.write(towrite)
