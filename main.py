@@ -16,14 +16,14 @@ def create_cacheservers(C,X):
 
 def create_videos(V,video_sizes):
     vid_list = []
-    for i in range(C):
+    for i in range(V):
         vid = video(i,video_sizes[i])
         vid_list += [vid]
     return vid_list
 
 def create_requests(R,RV_list,RE_list,RN_list):
     req_list = []
-    for i in range(C):
+    for i in range(R):
         req = request(RE_list[i],RV_list[i],RN_list[i])
         req_list += [req]
     return req_list
