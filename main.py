@@ -1,5 +1,8 @@
 #main.py
 
+import numpy as np
+import pandas as pd
+
 def create_cacheservers():
 
 
@@ -51,6 +54,22 @@ def read_data(title):
 
 
     return V,E,R,C,X,LD_list,K_list,caches_list,RV_list,RE_list,RN_list
+
+#remplir
+list_of_requests = [] #size E x V
+list_of_best_caches = [] #size E x V, correspond 
+list_of_best_L = [] #size E x V
+list_of_L = [] #size E x V
+
+#Construire le dataframe de tous les triplets (cout,endpoint,video)
+request_obj = [list_of_requests[i].value*(list_of_best_L[i] - list_of_L[i]) for i in range(len(list_of_requests))]
+request_endpoints = [request.endpoint for request in list_of_requests]
+request_videos = [request.video for request in list_of_requests]
+list_of_obj = pd.DataFrame(np.vstack((request_obj, request_endpoints, request_videos, list_of_best_caches)).T, columns=['obj', 'endpoints', 'videos', 'cache'])
+
+#Sort by obj
+list_of_obj.sort('obj', inplace=True)
+
 
 def write_sub(name,N,cacheserver_list):
     file = open(name,'w')
