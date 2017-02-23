@@ -4,5 +4,13 @@ class endpoint(object):
 		self.cacheservers = [] #contains cacheservers ids, latencies
 		self.latency_datacenter = latency_datacenter
 
+	def addcacheserver(self, cacheserver):
+		return 0
+
+	def findbestcache(self, videoid, listcacheserver):
+		#tester trouve la meilleure latency possible (capacité et connectivité)
+		return cacheserverid,latency
 	
-	def :
+	def getcurrentlatency(self, videoid):
+		#calcule la latency actuel pour la videoid
+		return latency

@@ -1,8 +1,8 @@
 import numpy as np
 
-class requests(object):
-	def __init__(self, data):
-		self.array = np.array() #matrix videos in rows and endpoints in columns and counts
+class request(object):
+	def __init__(self, endpointid, videoid, value):
+		self.endpoint = endpointid
+		self.video = videoid
+		self.value = value
 		
-	
-	def :
