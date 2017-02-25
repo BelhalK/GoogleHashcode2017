@@ -1,3 +1,4 @@
+#endpoints
 class endpoint(object):
 	def __init__(self,idx, latency_datacenter):
 		self.idx = idx
