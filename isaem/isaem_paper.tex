@@ -1,0 +1,923 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{makecell}
+\usepackage{algorithm} 
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage[colorlinks=true,citecolor=green,urlcolor=green]{hyperref}%
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage[round]{natbib} 
+\usepackage{titling} % Customizing the title section
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{multirow}
+%% The amsthm package provides extended theorem environments
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage{fancyvrb}
+\usepackage{dsfont}
+\usepackage[utf8]{inputenc}
+\usepackage{bbm}
+\usepackage{amsmath}
+\usepackage{bbold}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{stackengine}
+\usepackage[toc,page]{appendix}
+\usepackage{amsmath}           
+\usepackage{hyperref}% http://ctan.org/pkg/hyperref
+\usepackage{cleveref}% http://ctan.org/pkg/cleveref
+\usepackage{lipsum}%
+  {
+      \theoremstyle{plain}
+      \newtheorem{assumption}{M}
+      \newtheorem{lemma}{Lemma}
+      \newtheorem{assumption_saem}{ISAEM}
+  }
+\crefname{lemma}{Lemma}{Lemmas}
+\usepackage{amssymb,amsthm,mathrsfs,amsfonts,dsfont}
+\usepackage{mathtools}
+
+\DeclarePairedDelimiterX{\infdivx}[2]{(}{)}{%
+  #1\;\delimsize\|\;#2%
+}
+
+
+\DeclareMathOperator*{\E}{\mathbb{E}}
+\DeclareMathOperator*{\St}{\tilde{S}}
+\DeclareMathOperator*{\s}{\barbelow{s}}
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}
+
+\theoremstyle{definition}
+\newtheorem{defn}[thm]{Definition} % definition numbers are dependent on theorem numbers
+\newtheorem{exmp}[thm]{Example} % same for example numbers
+\newcommand{\Pt}{\~P}
+
+\newcommand{\infdiv}{D_{KL}\infdivx}
+\newcommand\barbelow[1]{\stackunder[1.2pt]{$#1$}{\rule{.8ex}{.075ex}}}
+\bibliographystyle{plainnat}
+
+\usepackage{fancyhdr} % Headers and footers
+\pagestyle{fancy} % All pages have headers and footers
+\fancyhead{} % Blank out the default header
+\fancyfoot{} % Blank out the default footer
+\setlength{\droptitle}{-12\baselineskip} % Move the title up
+\pretitle{\begin{center}\Huge\bfseries} % Article title formatting
+\posttitle{\end{center}} 
+
+\font\myfont=cmr12 at 20pt
+\title{\line(1,0){350}\\\myfont Convergence of Incremental Stochastic Versions of the EM Algorithm\\\line(1,0){350}}
+\author{%
+\textsc{Belhal Karimi, Marc Lavielle, Eric Moulines}\\
+\normalsize  CMAP, Ecole Polytechnique, Universite Paris-Saclay, 91128 Palaiseau, France\\ % Your institution
+\normalsize \href{mailto:belhal.karimi@polytechnique.edu}{belhal.karimi@polytechnique.edu} % Your email address
+%\and % Uncomment if 2 authors are required, duplicate these 4 lines if more
+%\textsc{Jane Smith}\thanks{Corresponding author} \\[1ex] % Second author's name
+%\normalsize University of Utah \\ % Second author's institution
+%\normalsize \href{mailto:jane@smith.com}{jane@smith.com} % Second author's email address
+}
+\date{\today} % Leave empty to omit a date
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+\begin{abstract}
+\noindent The Monte Carlo EM (MCEM) and the Stochastic Approximation EM (SAEM) are powerful inference algorithms in the context of missing data models. We introduce variants of those algorithms that justifies incremental versions where only one, or a batch of individuals, are considered at each iteration. In both cases we'll prove almost-sure convergence and give experimental results on simple cases and on more complicated Pharmacokinetics models showing the effectiveness of our technique.
+\end{abstract}
+
+\section{Introduction}
+We consider a complete model (y,z) where the realizations of y are observed and z is the missing data. When the complete model $p(y,z,\theta)$ is parametric, the goal is to do maximum likelihood (ML) estimation:
+\begin{equation}
+\theta^{ML} = \arg\max \limits_{\theta} p(y,\theta)
+\end{equation}
+When the direct derivation of this expression is hard, several methods use the complete model to iteratively find the quantity of interest.
+The EM algorithm has been the object of considerable interest since its presentation by Dempster, Laird and Rubin in 1977. It has been relatively effective in context of maximum likelihood estimation of parameters of incomplete model (unobserved or more). This algorithm is monotonic in likelihood making it a stable tool to work with.
+
+Many improvements have been provided since the birth of this algorithm. In particular, \citep{neal} proposed an incremental version where a single data is handled at each iteration. It showed faster convergence accompanied by a lost of monotonic convergence in likelihood.\\
+In terms of efficiency of computation, \citep{fort, cappe} introduced an online version where the whole dataset is not analyzed at each iteration but a growing batch of it only.
+
+Yet, when the quantity computed at the E-step involves infeasible computations, new methods have been developed in order to by-pass the issue. The stochastic EM algorithm \citep{diebolt} has been proposed in the context of mixture problem and involves splitting the E-step in a first simulation of the latent variables step and then a direct evaluation of the complete log model. A Robbins Monroe type approximation can be used to evaluate that latter quantity after the simulation step, that is the SAEM algorithm \citep{lavielle2,moulines}.
+Based on that last derivation of the EM algorithm, we are presenting a view that justifies an incremental variant of the SAEM and the MCEM algorithms. We'll present theoretical convergence properties, application to several types of models and finish with a discussion on optimal batch size and batch selection.
+
+The recent development of incremental techniques involves faster gradient descent algorithms. The original full gradient descent combined with the stochastic version to propose an averaged gradient solution \citep{bach, roux} for the strongly convex sum of a finite set of smooth functions. It incorporates a memory of previous gradients at each iteration to reach a faster convergence rate.
+
+
+%------------------------------------------------
+
+
+\section{Model and notations}
+We study a classical missing data problem where:
+\begin{itemize}
+\item y is a random variable called the observed data that takes its value in $(y_i, 1\leq i \leq N)$
+\item z represents the missing data and takes its value in$(z_i, 1\leq i \leq N)$
+\item $\log p(y,\theta)$ is the incomplete data log-likelihood
+\item $\log p(y,z,\theta)$ is the complete data log-likelihood and obtained by augmenting the observed data with the missing data
+\item We'll call $P_{y_i,z_i,\theta}$ and $P_{z_i|y_i,\theta}$ the probability distributions associated to the densities $p(y_i,z_i,\theta)$ and $p(z_i|y_i,\theta)$
+\end{itemize}
+
+
+In this article, we are restricting ourselves to models that belong to the curved exponential family:
+\begin{assumption}
+$\Theta \subseteq \mathbb{R}^l$ the parameter space, $ \mathcal{Y} \subseteq \mathbb{R}^d$ and $\mathcal{Z} \subseteq \mathbb{R}^d$ and $\mu$ is a $\sigma$-finite positive Borel measure on $\mathcal{Y} \times \mathcal{Z}$.\\
+Denote by $\langle . { , }. \rangle$ the scalar product. The complete log-likelihood is given by:
+\begin{equation}
+\log p(y_i,z_i,\theta) = -\psi(\theta) + \langle \St(y_i,z_i), \phi(\theta)\rangle
+\end{equation}
+\end{assumption}
+Where $\psi$ and $\phi$ are continuous function of $\theta$ and $\St$ is a sufficient statistic of the complete model which takes its values in an open subset $\mathcal{S}$ of $\mathbb{R}^m$. In the sequel, the incomplete and the complete log-likelihood, with respect to the reference measure $\mu$ will be noted as $l(\theta)$ and $L(S,\theta) = -\psi(\theta) + \langle S, \phi(\theta)\rangle$.\\
+We assume the continuity of the incomplete log-likelihood. 
+
+\begin{assumption}
+\begin{itemize}
+\item $\psi$, $\phi$ are continuous on $\Theta$and $\St$ is continuous on $\mathcal{Y} \times \mathcal{Z}$
+\item $\forall \theta \in \Theta, \bar{S}(\theta):= p(z|y,\theta)\mu(dz) = \frac{p(y,z,\theta)}{p(y,\theta)}\mu(dz)$ is finite and continuous on $\Theta$
+\item There exists a continuous function $\hat{\theta}: \mathcal{S} \mapsto \Theta$ such that for all $S \in \mathcal{S}$, $L(S,\hat{\theta}(S)) = \sup \limits_{\theta} L(S,\theta)$
+\item $p(y,\theta)$ is a continuous function of $\theta$ and for any $M > 0$ the level set $\{\theta \in \Theta, p(y,\theta) > M\}$ is compact
+\end{itemize}
+\end{assumption}
+
+
+Let denote the stationary points of the EM algorithm as $\mathcal{L}$. Every point in $\mathcal{L}$ is thus a stationary point of the function $\hat{\theta}(S)$ as defined above.
+\begin{assumption}
+$p(y,\mathcal{L})$ is compact
+\end{assumption}
+
+Using Definition 2.3.1. and Theorem 2.3.1. of \citep{robert}, there exists a function $\Phi: \Theta \mapsto \mathcal{S}$ such that:
+\begin{equation}
+\forall \theta \in \Theta, \theta = \Phi^{-1}(S)
+\end{equation}
+
+This function is:
+\begin{itemize}
+\item Continuous on $\Theta$
+\item Differentiable on $\Theta$
+\item Invertible with its inverse, $\Phi^{-1}$, being continuous and differentiable
+\item Bijective i.e.
+\begin{equation}
+\forall S \in \mathcal{S}, \exists! \theta \in \Theta, \textrm{ such that } \theta = \Phi^{-1}(S)
+\end{equation}
+\end{itemize}
+
+
+%------------------------------------------------
+
+\section{Maximum likelihood estimation}
+Our problem joins a familiar class of problem in computational statistics that consists in maximizing the following quantity:
+\begin{equation}
+\log p(y,\theta) = \int_{}{\log p(y,z,\theta)\mu(dz)}
+\end{equation}
+When this quantity can not be computed in closed form, many algorithms use iterative procedure to find the maximum likelihood parameter estimate. Among those techniques, the EM algorithm \citep{dempster}. These two steps algorithm consists in maximizing an auxiliary quantity that is the expectation of the complete log-likelihood with respect to the conditional distribution over the missing variable conditioned on the current parameter estimate (also called the posterior distribution).\\
+Several alternatives have been developed throughout the past decades. Most of them alleviate the computation of the expectation using approximates. The MCEM algorithm \citep{diebolt} approximates this quantity by a Monte Carlo integration, the SAEM algorithm \citep{lavielle} uses a stochastic approximation of this quantity.\\
+In this paper we'll deal with the incremental versions of those three algorithms (EM, MCEM and SAEM) noted IEM, IMCEM and ISAEM.
+\\
+First let's explain how the incremental version of the EM algorithm can be shown to converge.\\
+Following \citep{byrne} work, it is important to introduce this algorithm as an iteration of two minimizations over two different spaces (first of all, the space where the sufficient statistics takes their value in $\mathcal{S}$ and then the parameter space $\Theta$).
+
+\section{IEM as a Generalized Alternating Minimization framework}
+It is now well known (\citep{csiszar}, \citep{tibshirani} and \citep{gunawardana}) that the EM algorithm can be seen as a double minimization process.\\
+Same framework can be used for the Incremental EM in order to prove its convergence.\\
+As a reminder the complete likelihood belongs to the curved exponential family and $\St(y_i,z_i)$ denotes a sufficient statistic for the complete model $p(y_i,z_i,\theta)$. Obviously, there are $N$ quantities $\St(y_i,z_i)$ where $1\leq i \leq N$.
+In the sequel we'll use the vector $(\theta, S_1,..,S_N)$ as argument of the criteria to minimize at each iteration. $\theta$ corresponds to the model parameter estimate and $S_i$ will be defined by the algorithm.\\
+
+\noindent The criteria that we will be minimizing alternatively is, for all $\theta \in \Theta$ and $S_i \in \mathcal{S}$:
+
+\begin{equation}
+A(\theta, S_1,..S_N) = \infdiv{\prod_{i=1}^{N}{P_{z_i|y_i,\Phi^{-1}(S_i
+)}}}{\prod_{i=1}^{N}{P_{y_i,z_i,\theta}}}
+\end{equation}
+Where each $\Phi^{-1}(S_i)$ corresponds to the parameter estimate calculated at the iteration when the index $i$ was picked. As a result, keeping only the N components $S_i$ gives us information about the last N parameter estimates.
+Since the variables y and z are independents, the criteria can be written as a sum of $N$ terms:
+\begin{equation}
+\begin{split}
+A(\theta, S_1,..S_N) & = \sum_{i=1}^{N}{A_i(\theta,S_i)}\\
+& = \sum_{i=1}^{N}{\infdiv{P_{z_i|y_i,\Phi^{-1}(S_i)}}{P_{y_i,z_i,\theta}}}
+\end{split}
+\end{equation}
+
+Let's also remind the Incremental EM (IEM) algorithm.
+
+\begin{algorithm}
+\caption{IEM Algorithm}
+\label{pseudoIEM}
+\begin{algorithmic}[1]
+\State Initial value $\theta_0$
+\State $\theta \gets \theta_0$
+\For{$k \gets 1 \textrm{ to } K$}
+\State $I_{k} \in [\![1,N]\!]$
+  \If{$i \neq I_{k}$}
+      \State $S_i^k \gets S_i^{k-1}$
+       \Else
+                \State $S_{I_{k}} \gets \E(\St(y_{I_{k}},z_{I_{k}})|y_{I_{k}},\theta_{k-1})$
+        \EndIf
+      \State $\theta_{k} \gets \hat{\theta}(S^{k}) = \hat{\theta}(\frac{\sum_{i=1}^{N}{S^{k}_i}}{N})$
+\EndFor  
+\State \Return $\theta_K$
+\end{algorithmic}
+\end{algorithm}
+\newpage
+\noindent At iteration $k$ we pick individual $I_{k} \in [\![1,N]\!]$ and the algorithm consists in:\\
+\\
+\textbf{A Forward mapping $\mathbf{F_{k}}$:} The mapping that minimizes the criteria A with respect to the quantity $S_{I_{k}}$:
+\begin{equation}
+\begin{split}
+S_{I_{k}}^k  & = \arg \min \limits_{S_{I_{k}}} (A_{I_{k}}(\theta_{k-1}, S_{I_{k}}))\\
+& = \arg \min \limits_{S_{I_{k}}}  (\infdiv{P_{z_{I_{k}}|y_{I_{k}},\Phi^{-1}(S_{I_{k}})}}{P_{y_{I_{k}},z_{I_{k}},\theta_{k-1}}})
+\end{split}
+\end{equation}
+
+The solution to this minimization problem is given by ~\cref{lma1}. The solution is the conditional distribution evaluated at the current model parameter estimate $\theta_{k-1}$. As a result the quantity we are looking for is:
+\begin{equation}
+S_{I_{k}}^k = \E(\St(y_{I_{k}},z_{I_{k}})|y_{I_{k}},\theta_{k-1})
+\end{equation}
+
+Finally the Forward mapping, consists in replacing the components $S_i^k$ as follows:
+\begin{equation}
+S_i^{k} = \left\{
+    \begin{array}{ll}
+       \E(\St(y_{I_{k}},z_{I_{k}})|y_{I_{k}},\theta_{k-1}) \text{ if i = $I_{k}$}\\
+        S^{k-1}_i \text{else}
+    \end{array}
+\right.
+\end{equation}
+
+
+
+\noindent \textbf{A Backward mapping B:} This mapping is closely related to the M step in the EM algorithm and consists in finding the parameter estimate that minimizes the criteria A while fixing the components $S_i$ to their current values $S_i^k$:
+
+\begin{equation}
+\begin{split}
+\theta_{k} & = \arg \min\limits_{\theta}(A(\theta,S_1^k,\dots,S_N^k) \\
+& = \arg \min\limits_{\theta}(\sum_{i=1}^{N}{\int_{}{\log\frac{p(z_i|y_i, \Phi^{-1}(S_i^k))}{p(y_i,z_i, \theta)}p(z_i|y_i, \Phi^{-1}(S_i^k)) dz_i}})\\
+& = \arg \max\limits_{\theta}(\sum_{i=1}^{N}{\int_{}{\log p(y_i,z_i,\theta)p(z_i|y_i, \Phi^{-1}(S_i^k)) dz_i}})
+\end{split}
+\end{equation}
+
+\noindent The iteration $k$ of the IEM algorithm is thus written as:
+\begin{equation}
+\theta_{k}=B \circ F_{k}(\theta_{k-1}, S_1^{k-1}, \dots, S_N^{k-1})
+\end{equation}
+
+
+The IEM defined as above can be shown to converge to a subset of stationary points of the EM algorithms named $\mathcal{L}$\\
+
+\subsection{Convergence Theorem}
+Let's first remind Zangwill's Global convergence theorem.
+
+\begin{enumerate}
+    \item H: $\mathcal{Z} \mapsto \mathcal{Z}$ our algorithm returning a sequence or parameter $\{\theta^k\}$ such that $\{\theta^k\}_{k=0}^{\infty} \subset \mathcal{M}$ and $\mathcal{M} \subset \mathcal{Z}$ be a compact set
+    \item Let $\Gamma$ be a given solution set
+    \item $\forall \theta' \in H(\theta)$, there is a continuous function $\alpha: \mathcal{Z} \mapsto \mathbb{R}$ such that:
+    \begin{enumerate}
+      \item if $\theta \notin \Gamma, \alpha(\theta') < \alpha(\theta)$
+      \item if $\theta \in \Gamma, \alpha(\theta') = \alpha(\theta)$
+    \end{enumerate}
+    \item H is closed at $\theta$ if $\theta \notin \Gamma$
+\end{enumerate}
+Then the limit of any convergent subsequence of $\{\theta^k\}$ converges to a subset of $\Gamma$ when k tends to $\infty$\\
+
+
+\begin{lemma}\label{lma1}
+The following criteria for all $(\phi, \theta) \in \Theta$ and for all $S_i \in \mathcal{S}$:
+\begin{equation}
+ A(\phi,S_i,\theta) = D_{KL}(P_{z_i|y_i,\phi}||P_{y_i,z_i,\theta})
+\end{equation}
+reaches its minimum when $\phi = \theta$
+\end{lemma}
+
+The IEM convergence theorem can then be written as:
+\begin{thm}
+Assume $M1-M3$. Let $\{\theta_k\}$ a sequence of parameters defined by algorithm 1. Then:\\
+$\{p(y,\theta_k)\}_{k>0}$ converges to a connected component of $p(y,\mathcal{L})$
+
+\end{thm}
+
+\textit{Proof}
+\\
+The Backward step ensures by construction:
+\begin{equation}
+\begin{split}
+& A(\theta_{k},S_1^k,\dots,S_N^k) \\
+& < A(\theta_{k-1},S_1^k,\dots,S_N^k)\\
+& = \sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^k)} + A_{I_{k}}(\theta_{k-1},S_{I_{k}}^k)
+\end{split}
+\end{equation}
+The right hand side of the inequality is composed of $N-1$ terms that do not change at this iteration so:
+\begin{equation}
+\sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^k)}  = \sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^{k-1})}
+\end{equation}
+\noindent And the $I_{k}^{th}$ term of the sum can be upper bounded as a result of the forward mapping:
+\begin{equation}
+A_{I_{k}}(\theta_{k-1},S_{I_{k}}^k) = \underbrace{A_{I_{k}}(\theta_{k-1},\E(\St(y_{I_{k}},z_{I_{k}})|y_{I_{k}},\Phi^{-1}(S_{I_{k-1}}^k)))}_{= \infdiv{P_{z_{I_{k}}|y_{I_{k}},\Phi^{-1}(S_{I_{k-1}}^{k})}}{P_{y_{I_{k}},z_{I_{k}},\theta_{k-1}}}}  < A_{I_{k}}(\theta_{k-1},S_{I_{k}}^{k-1})
+\end{equation}
+
+\noindent And finally we get:
+\begin{equation}
+\begin{split}
+A(\theta_{k},S_1^k,\dots,S_N^k) & < A(\theta_{k-1},S_1^k,\dots,S_N^k)\\
+& = \sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^k)} + A_{I_{k}}(\theta_{k-1},S_{I_{k}}^k)\\
+& < \sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^{k-1})} + A_{I_{k}}(\theta_{k-1},S_{I_{k}}^{k-1})\\
+& < A(\theta_{k-1},S_1^{k-1},\dots,S_N^{k-1})
+\end{split}
+\end{equation}
+The application of Zangwill's convergence theorem gives the proof of the theorem.
+
+
+\subsection{Example on a simple case}
+
+Let's consider the case when all the variables of interest are Gaussian.
+\begin{equation}
+y_i = z_i + \epsilon_i
+\end{equation}
+Where $z_i \sim \mathcal{N}(\theta,\omega^2)$ and $\epsilon_i \sim \mathcal{N}(0,\sigma^2)$.
+Since the $z_i$ and $\epsilon_i$ are i.i.d we have that $y_i \sim \mathcal{N}(\theta,\sigma^2 + \omega^2)$ and $y_i|z_i \sim \mathcal{N}(z_i,\sigma^2)$.\\
+The goal is to find an estimate of the mean $\theta$ that maximizes the likelihood $p(y,\theta)$ considering that $\sigma^2$ and $\epsilon^2$ are known. The maximum likelihood is easy to compute in this case since $y_i \sim \mathcal{N}(\theta,\sigma^2 + \omega^2)$:
+\begin{equation}
+\theta_{ML} = \frac{1}{N}\sum_{i=1}^{N}{y_i}
+\end{equation}\\
+
+We can rewrite the complete log likelihood $\log p(y,z,\theta)$ as part of the exponential family:
+\begin{equation}
+\begin{split}
+\log p(y,z,\theta) & = \sum_{i=1}^{N}{(\log p(y_i|z_i,\theta) + \log p(z_i,\theta))}\\
+& = \sum_{i=1}^{N}{-\frac{1}{2}\log(2\pi\sigma^2) -\frac{(y_i - z_i)^2}{2\sigma^2} -\frac{1}{2}\log(2\pi\omega^2) -\frac{(z_i - \theta)^2}{2\omega^2}}
+\end{split}
+\end{equation}
+The resulting statistics are: $S_1(y,z) = \sum_{i=1}^{N}{z_i} $, $S_2(y,z) = \sum_{i=1}^{N}{z_iy_i} $,$S_3(y,z) = \sum_{i=1}^{N}{z_i^2} $
+Let's define the quantity of interest $p(z_i|y_i,\theta)$ using Bayes rule.
+We find that $z_i|y_i \sim \mathcal{N}(\alpha\theta+(1-\alpha)\bar{y}, \Gamma^2)$ with $\alpha = \frac{\sigma^2}{\sigma^2+\omega^2}$ and $\Gamma^2 = \frac{\sigma^2\omega^2}{\sigma^2+\omega^2}$
+
+
+\subsection{EM}
+Let's use the alternating minimization framework. At iteration $k+1$ we do:\\
+\textbf{Forward mapping:} Find the distribution that minimizes the criteria as defined above.\\
+It is well known that $p(z|y,\theta_k)$ is the solution of our minimization problem.
+
+\noindent \textbf{Backward mapping:}
+\begin{equation}
+\begin{split}
+& \theta_{k+1} = \arg \max \limits_{\theta \in \Theta} \E_{p(z|y,\theta_k)}(p(y,z,\theta))\\
+& = \hat{\theta}(S) = \frac{\sum_{i=1}^{N}{\E{(S(y_i,z_i)|y_i,\theta_{k})}}}{N}\\
+& = \alpha \theta_{k} + (1-\alpha)\bar{y}\\
+& \theta_{k+1} - \hat{\theta} = \alpha (\theta_{k} - \hat{\theta})\\
+& \theta_{k+1} - \hat{\theta} = \alpha^{k+1} (\theta_{0} - \hat{\theta})
+\end{split}
+\end{equation}
+
+Since $\alpha < 1$, the convergence is proven
+
+\subsection{IEM}
+Here the vector of sufficient statistic is different because at each iteration only one individual is picked.\\
+It is necessary that one pass over the data has already been done. We are then dealing with any iterations $N+j$ where we pick individual $j$ only.
+
+\begin{equation}
+S(y,z) = 
+\left(
+\begin{array}{c}
+S(y_1,z_1) =z_1^{(N+j)}= z_1^{(N+1)}\\
+..\\
+S(y_j,z_j) =z_j^{(N+j)}= z_j^{(N+j)}\\
+..\\
+S(y_N,z_N) =z_N^{(N+j)}= z_N^{(N)}\\
+\end{array}
+\right)
+\end{equation}
+\noindent The Forward mapping gives us the expression of the expectation of each component of the sufficient statistic:
+\begin{equation}
+\begin{matrix} 
+\E_{p(z_1|y_1,\theta_N)}(z_1^{(N+1)}) = \alpha \theta_{N} + (1-\alpha)y_1\\
+..\\
+\E_{p(z_j|y_j,\theta_{N+j-1})}(z_j^{(N+j)})= \alpha \theta_{N+j-1} + (1-\alpha)y_j\\
+..\\
+\E_{p(z_N|y_N,\theta_{N-1})}(z_N^{(N)}) = \alpha \theta_{N-1} + (1-\alpha)y_N
+\end{matrix}
+\end{equation}
+
+\noindent We can now apply our maximization step:
+\begin{equation}
+\begin{split}
+& \theta_{(N+j)} = \hat{\Theta}(S) = \frac{\sum_{i=1}^{N}{\E{(S(y_i,z_i)|y_i,\theta_{(N+j-i)})}}}{N}\\
+& \theta_{(N+j)} = \frac{\alpha}{N} \sum_{i=1}^{N}{\theta_{N+j-i}} + (1-\alpha)\bar{y}\\
+\end{split}
+\end{equation}
+If we define the vector of parameter as follow (with $k=N+j$):
+
+\begin{equation}
+\theta_{k} = 
+\left(
+\begin{array}{c}
+\theta_{k}\\
+..\\
+\theta_{k-N+1}\\
+\end{array}
+\right) = \rho \theta_{k-1} + (1-\alpha)\bar{y}e_1 
+\end{equation}
+
+Where:
+\begin{equation}
+\rho = \begin{pmatrix} 
+\frac{\alpha}{N} & .. & .. & \frac{\alpha}{N} \\
+1 & 0 & .. & 0\\
+0 & 1 & .. & 0\\
+.. & .. & .. & ..\\
+.. & .. & .. & 0\\
+\end{pmatrix}
+\end{equation}
+And:
+\begin{equation}
+e_1 = \begin{pmatrix} 
+1\\
+0\\
+..\\
+0\
+\end{pmatrix} 
+\end{equation}
+
+We can easily show that the eigenvalues of $\rho$ are strictly inferior to $1$ and thus conclude on the convergence of the algorithm. \\
+
+\section{Incremental MCEM convergence}
+
+Let's consider now the stochastic version of the IEM algorithm called the Incremental MCEM algorithm.\\
+As a reminder, the Monte Carlo EM (MCEM) was initially introduced by \citep{wei} in order to replace the E-step of the EM that consists in evaluating the expectation of the complete log-likelihood under the posterior distribution. The E-step, at iteration k of the MCEM, approximates that quantity by its Monte Carlo integration:
+\begin{equation}
+Q_k(\theta,\theta_{k-1}) = \frac{1}{M_k}\sum_{m=1}^{M_k}{\log p(y,(z^k)^m,\theta)}
+\end{equation}
+Where $z^k \sim p(z|y,\theta_{k-1})$ $M_k$ times.\\
+One obvious difference with the deterministic algorithm is that this simulation step involves a noise that does not guarantee the boundedness of the sequence of resulting parameters $\{\theta_k\}_{k>0}$. In order to ensure this boundedness we'll use the stable version of \citep{chen}:\\ 
+\textit{Stable MCEM algorithm}:. Let $\{\mathcal{K}_k\}$ be a sequence of compacts such that, for any $k>0$:
+\begin{equation}\label{eq:compact}
+\mathcal{K}_k \subseteq \mathcal{K}_{k+1} \textrm{ and } \Theta = \bigcup\limits_{k>0} \mathcal{K}_k
+\end{equation}
+Set $p_0 = 0$ and consider an initial value $\theta_0 \in \mathcal{K}_{0}$. The quantity $p_k$ will be the number of times we reinitialize the current model parameter estimate:
+\begin{equation}\label{eq:init}
+\begin{split}
+& \textrm{if } \theta_k = \arg\max\limits_{\theta} Q_k(\theta,\theta_{k-1}) \in \mathcal{K}_k \textrm{ then } \theta_k = \arg\max\limits_{\theta} Q_k(\theta,\theta_{k-1}) \textrm{ and } p_k = p_{k-1}\\
+& \textrm{if } \theta_k = \arg\max\limits_{\theta} Q_k(\theta,\theta_{k-1}) \notin \mathcal{K}_k \textrm{ then } \theta_k = \theta_0 \textrm{ and } p_k = p_{k-1} + 1
+\end{split}
+\end{equation}
+
+The Incremental version differs in the sense that during the simulation step only the latent variable whose index has been picked will be simulated. All of the others remain unchanged. The incremental version of the algorithm can thus be described as:
+\begin{algorithm}
+\caption{IMCEM Algorithm}
+\label{pseudoIMCEM}
+\begin{algorithmic}[1]
+\State Initial value $\theta_0$
+\State $M_k$ an increasing sequence of integers
+\State $\theta \gets \theta_0$
+\For{$k \gets 1 \textrm{ to } K$}
+\State $I_{k} \in [\![1,N]\!]$
+      \If{$i \neq I_{k}$}
+        \State $z_i^{k} \gets z_i^{k-1}$
+      \Else
+        \State $z_{I_{k}}^{k} \sim p(z_{I_{k}}|y_{I_{k}}; \theta_{k-1})$
+      \EndIf
+        \State $s_{k} \gets \frac{1}{M_k}\sum_{m=1}^{M_k}{\St((z^{k})^m)}$
+        \State $\theta_{k} \gets \hat{\theta}(s_{k}))$
+\EndFor  
+\State \Return $\theta_{K}$
+\end{algorithmic}
+\end{algorithm}
+\\
+As we said above, the simulation step induces a noise, i.e. an error between the Monte Carlo approximation $\hat{S_k}$ and the expectation of the sufficient statistics $\bar{S}_k$ that needs to be controlled in $L^p$-norm with $\hat{S_k}$ defined as follow:
+\begin{equation}
+\hat{S}_{k} = 
+\left(
+\begin{array}{c}
+\frac{1}{M_{k}}\sum_{m=1}^{M_{k}}{\St((z_1^{k})^m)} \\
+..\\
+\frac{1}{M_{k}}\sum_{m=1}^{M_{k}}{\St((z_i^{k})^m)} \\
+..\\
+\frac{1}{M_{k}}\sum_{m=1}^{M_{k}}{\St((z_N^{k})^m)} \\
+\end{array}
+\right)
+\end{equation}
+In the case where at iteration k we are picking individual $I_{k}$, 
+\begin{itemize}
+\item $z_{I_{k}}^{k}$ is sampled $M_{k}$ times from the posterior distribution $p(z_{I_{k}}|y_{I_{k}},\theta_{k-1})$.
+\item for $j \neq i$, $z_j^{k} = z_j^{k-1}$ 
+\end{itemize}
+
+\begin{assumption}
+There exist $p \geq 2$ and $\lambda$ a probability measure on $\mathcal{Y} \times \mathcal{Z}$ such that for any compact set $\mathcal{K} \subseteq \Theta$:
+\begin{equation}
+\sup \limits_{\theta \in \mathcal{K}} \sup \limits_{k \geq 1} k^{-p/2}\E_{\lambda,\theta}(|\sum_{l=1}^{k}{\St(\phi_l) - \pi_{\theta}(\St)}|^p) \leq \infty
+\end{equation}
+Where $\E_{\lambda,\theta}$ is the expectation of the Markov chain $\{\phi_k\}$ with transition kernel $P_\theta$ and initial distribution $\lambda$ and $\pi_{\theta}(dz) = p(z|y,\theta)\mu(dz)$ is the posterior distribution of the missing data $z$.
+\end{assumption}
+This assumption is verified using Proposition 1 of \citep{fort} (Rosenthal inequality and boundedness of the sufficient statistic).\\
+We also need to assume that, at each iteration, the number of simulation $M_k$ increases to ensure almost-sure convergence and that:
+\begin{assumption}
+$\{M_{k}\}$ is a sequence of integers and $p$ given by {\normalfont \textbf{M 4}} such that $\sum_{k}{M_{k}^{-p/2}}< \infty$
+\end{assumption}
+If we refer to the IEM algorithm by the mapping $T_{i}$ that corresponds to the iteration where the individual i is picked such that $\theta_{k} = T_{i}(\theta_{k-1})$ ($T_i$ as composition of a backward and a forward step), then as shown priorly, $\{p(y,\theta_{k})\}$ converges to $p(y,\theta^*)$ with $\theta^* \in \mathcal{L}$ and the limit points of $\{\theta_{k}\}_{k \geq 0}$ are in $\mathcal{L}$.\\
+Conventionally, random iterative mappings that approximate the deterministic iterative one $T_i$, used in the stochastic version algorithm, is noted $\{F_{k}\}_{k \geq 0}$. Moreover, if there exists a Lyapunov function W relative to $(T_{i},\mathcal{L})$ such that:
+
+\begin{equation}
+\begin{split}
+&\forall u \in \Theta, W \circ T_i(u) - W(u) \geq 0\\
+&\forall \mathcal{K} \subseteq \Theta \setminus \mathcal{L}, \inf\limits_{u \in \mathcal{K}}\{W \circ T_i(u) - W(u)\} > 0
+\end{split}
+\end{equation}
+
+Then the convergence of $\{F_{k}\}_{k \geq 0}$ is addressed under the the assumption that,:
+\begin{equation}
+\forall \mathcal{K} \subseteq \Theta, \lim\limits_{k}\sup\limits_{u \in \mathcal{K}} |W \circ F_{k}(u) - W \circ T_i(u)| = 0
+\end{equation}
+
+\begin{thm}
+Assuming {\normalfont \textbf{M1-M5}} and the latter assumption. Let $\{\mathcal{K}_{k}\}$ be a sequence of compacts satisfying ~\ref{eq:compact} and the sequence of parameter estimates $\{\theta_{k}\}$ satisfying ~\ref{eq:init}. Then:
+\begin{enumerate}
+  \item $\lim\limits_{k} p_{k} < \infty$ $w.p.1$ and $\lim \sup\limits_{k} |\theta_{k}|< \infty $ $w.p.1$
+  \item $\{p(y,\theta_{k})\}_{k \geq 0}$ converges to $p(y,\theta^*)$ with $\theta^* \in \mathcal{L}$
+  \item The limit points of $\{\theta_{k}\}_{k \geq 0}$ are in $\mathcal{L}$
+\end{enumerate}
+\end{thm}
+
+
+\subsection{On the same simple case}
+At iteration $N+j$, the vector of sufficient statistics remains the same as in the IEM.
+
+\begin{equation}
+S(y,z) = 
+\left(
+\begin{array}{c}
+S(y_1,z_1) =z_1^{(N+j)}= z_1^{(N+1)}\\
+..\\
+S(y_j,z_j) =z_j^{(N+j)}= z_j^{(N+j)}\\
+..\\
+S(y_N,z_N) =z_N^{(N+j)}= z_N^{(N)}\\
+\end{array}
+\right)
+\end{equation}
+
+In the IMCEM, only the latent variable whose index has been picked will be simulated. Moreover, it will be simulated by the posterior distribution under the latest model parameter estimate. This distribution is the solution to the optimization problem induced by the Forward mapping. As a result we have:
+
+\begin{equation}
+z_j^{(N+j)} \sim p(z_j|y_j,\theta_{N+j-1})
+\end{equation}
+When i<j, each iteration N+i consisted in simulating the latent variable following:
+\begin{equation}
+z_i^{(N+i)} \sim p(z_i|y_i,\theta_{N+i-1})
+\end{equation}
+And when i>j, i.e. the individuals that are being picked afterwards (in the context of a sequential sampling of the individuals indices), the latent variables were simulated at the previous pass:
+\begin{equation}
+z_i^{(i)} \sim p(z_i|y_i,\theta_{i-1})
+\end{equation}
+
+In this case the posterior distribution being a Gaussian distribution we can write each latent variable as:
+\begin{equation}
+z_j = \alpha \theta{N+j-1} + (1-\alpha)y_j + e_{j,(N+j-1)}
+\end{equation}
+Where $e_{j,(N+j-1)} \sim \mathcal{N}(0, \gamma^2)$.\\
+
+\noindent We can now apply our maximization step:
+\begin{equation}
+\begin{split}
+& \theta_{(N+j)} = \hat{\Theta}(S) = \frac{\sum_{i=1}^{N}{\sum_{m=1}^{M_(N+j)}{(S(y_i,(z_i)^m)|y_i,\theta_{(N+j-i)})}}}{M_(N+j)N}\\
+& = \frac{\alpha}{N} \sum_{i=1}^{N}{\theta_{N+j-i}} + (1-\alpha)\bar{y} + \bar{e}_{N+j}\\
+\end{split}
+\end{equation}
+Where $\bar{e} \sim \mathcal{N}(0, \frac{\gamma^2}{M_(N+j)N})$
+
+If we define the vector of parameter as follow (with $k=N+j$):
+
+\begin{equation}
+\theta_{k} = 
+\left(
+\begin{array}{c}
+\theta_{k}\\
+..\\
+\theta_{k-N+1}\\
+\end{array}
+\right) = \rho \theta_{k-1} + (1-\alpha)\bar{y}e_1 + \bar{e}_k e_1
+\end{equation}
+
+Where:
+\begin{equation}
+\rho = \begin{pmatrix} 
+\frac{\alpha}{N} & .. & .. & \frac{\alpha}{N} \\
+1 & 0 & .. & 0\\
+0 & 1 & .. & 0\\
+.. & .. & .. & ..\\
+.. & .. & .. & 0\\
+\end{pmatrix}
+\end{equation}
+And:
+\begin{equation}
+e_1 = \begin{pmatrix} 
+1\\
+0\\
+..\\
+0\
+\end{pmatrix} 
+\end{equation}
+
+\noindent Now if we consider a scheme where not only one individual is picked at each iteration but a batch pN (where p is a percentage). In that case we can write in scalar (to facilitate the notation we'll consider M=1 and $\bar{y} = 0$):
+\begin{equation}
+\begin{split}
+\theta_k & = \rho^{1/p} \theta_{k-1/p} + \sum_{i=0}^{\rho^{i}}\bar{e}_k\\
+& =  \rho^{1/p} \theta_{k-1/p} + \frac{1-\rho^{1/p}}{1-\rho}\bar{e}_k
+\end{split}
+\end{equation}
+In that case we can calculate the expectation and the variance of our estimator $\theta_k$ in the stationary regime:
+\begin{equation}
+\begin{split}
+& \E \theta_k = \rho^{k/p}\theta_0\\
+& \textrm{Var } \theta_k = \frac{\gamma^2}{N(1-\rho)^2}\frac{1-\rho^{1/p}}{1+\rho^{1/p}}
+\end{split}
+\end{equation}
+
+With these two expressions we understand what strategy is best for the choice of the batch size at each iteration. Indeed the bias is small when p is small so one should start with picking one individual first to kill the bias and the variance is decreasing when p is increasing. So once the bias is killed one should increase the size of the batch to kill the variance of the estimator.\\
+\\
+This result implies as well that the Online EM algorithm introduced by \citep{cappe} is the best strategy to follow even when all the data is initially available. In other words, even though one has access to the whole observed dataset, one should consider increasing batch of individuals at each iteration.
+
+
+\section{Incremental SAEM convergence}
+
+The Stochastic Approximation of the EM algorithm (SAEM) is similar to the MCEM algorithm in the sense that it consists in splitting the E-step into a simulation and an integration step. Just like the MCEM, the simulation step draw $M_k$ times the latent variable $z$ from the posterior distribution estimated with the current model parameter estimate. Then, instead of approximating the quantity of interest $Q_k(\theta,\theta_{k-1})$ at iteration $k$ by its Monte Carlo integration, we will execute a stochastic averaging procedure:
+
+\begin{equation}
+Q_k(\theta,\theta_{k-1}) = Q_{k-1}(\theta,\theta_{k-1}) + (\frac{1}{M_k}\sum_{m=1}^{M_k}{\log p(y,(z^k)^m,\theta)} - Q_{k-1}(\theta,\theta_{k-1}))
+\end{equation}
+Where $z^k \sim p(z|y,\theta_{k-1})$.
+
+Convergence properties of this algorithm has been developed in \citep{lavielle}. The proof consisted in finding the mean field $h: \mathcal{S} \mapsto \mathcal{S}$ of the algorithm and the Lyapunov function associated $V: \mathcal{S} \mapsto \mathbb{R}$ that were respecting the following equation:
+\begin{equation}
+\forall s \in \mathcal{S}, \langle \partial_s V(s), h(s) \rangle \leq 0
+\end{equation}
+Classically, the Lyapunov function is $-l(\hat{\theta}(s))$.\\
+Here, the challenge is to find the mean field that makes the Lyapunov function increase strictly at each iteration.
+Just like the convergence of the SAEM paper showed that the mean field was increasing the incomplete log likelihood, we can start by writing what is the mean field in the case of the ISAEM algorithm at each iteration.\\
+Let's start by describing the algorithm at iteration $(k)$ where we pick individual $I_k$ only:
+
+\begin{itemize}
+  \item A Stochastic approximation mapping $F_{k}$ defined by:
+  \begin{equation}
+    F_{k}(\theta_{k}, S_1^{k-1},..,S_N^{k-1}) = (\theta_{k}, S_{-I_k}^{k-1},S_{I_k}^{k})
+  \end{equation}
+  Where $S_{I_k}^{k} = S_{I_k}^{k-1} + \gamma_{k}(S^{k}(z_{I_k}^{k})-S_{I_k}^{k-1})$ with $z_{I_k}^{k} \sim P(z_{I_k}|y_{I_k},\theta_{k-1})$ and $S_j^{k} = S_j^{k-1}$ for $j \neq I_k$
+  \item A deterministic mapping (that remains unchanged with respect to the M-step of the EM)
+  \begin{equation}
+    F(\theta_{k-1}, S_{-{I_k}}^{k-1},S_{I_k}^{k}) = \hat{\theta}(\sum_{i=1}^{n}{S_i^{k})}) = \theta_{k}
+  \end{equation}
+\end{itemize}
+
+\begin{algorithm}
+\caption{ISAEM Algorithm}
+\label{pseudoISAEM}
+\begin{algorithmic}[1]
+\State Initial value $\theta_0$
+\State $\gamma_k$ an decrease sequence of positive numbers
+\State $\theta \gets \theta_0$
+\For{$k \gets 1 \textrm{ to } K$}
+\State $I_{k} \sim  \mathcal{U}([\![1,N]\!])$
+      \If{$i \neq I_{k}$}
+        \State $z_i^{k} \gets z_i^{k-1}$
+        \State $s_i^{k} \gets s_i^{k-1}$
+      \Else
+        \State $z_{I_{k}}^{k} \sim p(z_i|y_i; \theta_{k-1})$
+        \State $s_{I_{k}}^{k} \gets s_{I_{k}}^{k-1} + \gamma_k (S((z^{k})^m)-s_{I_{k}}^{k-1})$
+      \EndIf
+        \State $\theta_{k} \gets \hat{\theta}(s_{k})$  
+\EndFor  
+\State \Return $\theta_{K}$
+\end{algorithmic}
+\end{algorithm}
+\newpage
+
+\subsection{Intermediate results on convergence of an incremental Robbins-Monro Stochastic procedures}
+Since the ISAEM algorithm is a Robbins-Monro type stochastic approximation procedure, we can begin by giving convergence properties of a wider class of Robbin-Monro procedure taking the form of:
+
+\begin{equation}
+s_k = s_{k-1} + \gamma_k h(s_{k-1}) +\gamma_k e_k + \gamma_k r_k
+\end{equation}
+Where $\{e_k\}$, the stochastic excitation, and $\{r_k\}$, the remainder, are random processes defined on the same probability space taking their values in an open subset $\mathcal{S} \subset \mathbb{R}^m$.
+Here, h is referring to the mean field of the algorithm.\\
+
+The main result of convergence of such an incremental algorithm is:
+\begin{thm}
+Assume \textbf{M1-M3} and in addition that:
+\begin{assumption}
+$\forall n \geq 0, \s_k \in \mathcal{S}$ w.p.1
+\end{assumption}
+
+\begin{assumption}
+The sequence of stepsize $\{\gamma_k\}$ is a decreasing sequence of positive numbers such that $\sum_{k=1}^{\infty}{\gamma_k} = \infty$
+\end{assumption}
+
+\begin{assumption}
+The vector field h is continuous on $\mathcal{S}$ and there exists a continuously differentiable function $V: \mathcal{S} \mapsto \mathbb{R}$ such that:
+\begin{itemize}
+  \item $\forall \s \in \mathcal{S}, F(\s) = \langle \nabla_{\s}V(\s), h(\s) \rangle \leq 0$
+  \item $int(V(\mathcal{L})) = \varnothing $ where $ \mathcal{L} = \{\s \in \mathcal{S}: F(\s) = 0\}$
+\end{itemize}
+\end{assumption}
+
+\begin{assumption}
+The closure of the set $\{\s_k\}_{k>0}$ is a compact subset of $\mathcal{S}$ w.p.1.
+\end{assumption}
+
+\begin{assumption}
+While considering the RM stochastic approximation procedure ,we can write that our vector of sufficient statistics $\s$ follows:
+\begin{equation}
+\s_k = \s_{k-1} + \gamma_k h(\s_{k-1}) + \gamma_k e_k + \gamma_k r_k
+\end{equation}
+$\lim \limits_{p \to \infty} \sum_{k=1}^{p}{\gamma_k e_k}$ exists and is finite, $\lim \limits_{k \to \infty} r_k = 0$
+\end{assumption}
+
+Then we have that $d(\{s_k\},\mathcal{L}) = 0$
+\end{thm}
+
+
+\subsection{Convergence of the ISAEM}
+In that section, we will use the latest result to state the convergence of the ISAEM algorithm that consists in updating only one component of the sufficient statistics following:
+\begin{equation}
+S_i^{k} = S_i^{k-1} + \gamma_k(\St(z_i^{k})-S_i^{k-1})
+\end{equation}
+\newpage
+\begin{thm} Assume \textbf{M1 - M3} and in addition that:
+\begin{assumption_saem}
+The sequence of stepsizes $\{\gamma_k\}$ is a decreasing sequence of positive numbers such that $\forall k >0, 0 \leq \gamma_k \leq 1$,$\sum_{k=1}^{\infty}{\gamma_k} = \infty$ and $\sum_{k=1}^{\infty}{\gamma_k^2} < \infty$
+\end{assumption_saem}
+
+\begin{assumption_saem}
+$l(\theta)$ and $\hat{\theta}(s)$ are differentiable
+\end{assumption_saem}
+
+\begin{assumption_saem}
+For any positive Borel function $\phi$:
+\begin{equation}
+\E [\phi(z_{k+1}|\mathcal{F}_k] = \int{\phi(z)p(z;\theta_k}\mu(dz)
+\end{equation}
+\end{assumption_saem}
+
+\begin{assumption_saem}
+$\forall \theta \in \Theta, \int{||S(z)||^2p(z;\theta})\mu(dz) < \infty$ and $Cov_{\theta}(S(z))$ is continuous with respect to $\theta$
+\end{assumption_saem}
+
+\begin{assumption_saem}
+The closure of $\{S_k\}_{k>0}$ is a compact subset of $\mathcal{S}$
+\end{assumption_saem}
+
+Then $\lim \limits_{k \to \infty} d(\theta_k, \mathcal{L}) = 0 $ and $\lim \limits_{k \to \infty} d(S_k, \{s \in \mathcal{S}: \partial_s V(s) = 0\}) = 0 $ 
+\end{thm}
+
+This theorem shares the same assumptions of Theorem 5 of \citep{lavielle}. The main difference, here in the case of the incremental version, resides in the definition of the Lyapunov function that will be shown to respect assumptions \textbf{M 8}. Since, at each iteration, only one component, drawn uniformly, will be updated according to a stochastic approximation as described priorly.\\
+
+
+%----------------------------------------------------------------------------------------
+%   REFERENCE LIST
+%----------------------------------------------------------------------------------------
+
+\newpage
+\bibliography{ref.bib}
+\newpage
+\begin{appendices}
+\section{Proof of Theorem 1}
+The Backward step ensures by construction:
+\begin{equation}
+\begin{split}
+& A(\theta_{k},S_1^k,\dots,S_N^k) \\
+& < A(\theta_{k-1},S_1^k,\dots,S_N^k)\\
+& = \sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^k)} + A_{I_{k}}(\theta_{k-1},S_{I_{k}}^k)
+\end{split}
+\end{equation}ùm
+The right hand side of the inequality is composed of a quantity of $N-1$ terms that did not change at this iteration so:
+\begin{equation}
+\sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^k)}  = \sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^{k-1})}
+\end{equation}
+\noindent And the $I_{k}^{th}$ term of the sum can be upper bounded as a result of the forward mapping using Lemma 1.:
+\begin{equation}
+A_{I_{k}}(\theta_{k-1},S_{I_{k}}^k) = \underbrace{A_{I_{k}}(\theta_{k-1},\E(\St(y_{I_{k}},z_{I_{k}})|y_{I_{k}},\Phi^{-1}(S_{I_{k-1}}^k)))}_{= \infdiv{P_{z_{I_{k}}|y_{I_{k}},\Phi^{-1}(S_{I_{k-1}}^{k})}}{P_{y_{I_{k}},z_{I_{k}},\theta_{k-1}}}}  < A_{I_{k}}(\theta_{k-1},S_{I_{k}}^{k-1})
+\end{equation}
+
+\noindent And finally we get:
+\begin{equation}
+\begin{split}
+A(\theta_{k},S_1^k,\dots,S_N^k) & < A(\theta_{k-1},S_1^k,\dots,S_N^k)\\
+& = \sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^k)} + A_{I_{k}}(\theta_{k-1},S_{I_{k}}^k)\\
+& < \sum_{i \neq I_{k}}{A_i(\theta_{k-1},S_i^{k-1})} + A_{I_{k}}(\theta_{k-1},S_{I_{k}}^{k-1})\\
+& < A(\theta_{k-1},S_1^{k-1},\dots,S_N^{k-1})
+\end{split}
+\end{equation}
+
+
+\section{Proof of Theorem 2}
+\subsection{Proof of Theorem 2.1}
+We check the conditions of Proposition 11 of \citep{fort}. We can also take the incomplete log-likelihood as the Lyapunov function W relative to the deterministic EM map $T_{k}$ and to the solution set $\mathcal{L}$. Proving that the number of reinitialization $p_k$ is bounded comes down to proving that the series $\{\sum_{k}{\mathbb{1}_{\{|W\circ F_{k} - W\circ T_{k}|\mathbb{1}_{\theta_{k}}\geq \epsilon\}}}\}$ converges w.p.1. And the latter comes down to proving the convergence of $\sum_{k}{\mathbb{P}({\{|W\circ F_{k} - W\circ T_{k}|\mathbb{1}_{\theta_{k}}\geq \epsilon\}})}$ by the Borel-Cantelli lemma.
+
+
+\subsection{Proof of Theorem 2.2 and Theorem 2.3}
+Satisfying the conditions of Proposition 9 of \citep{fort} concludes the proof.
+
+
+\section{Proof of Theorem 4}
+\subsection{Checking assumption M8}
+
+
+
+Inspired by \citep{lavielle}, the whole idea behind the convergence properties relies on the expression of the mean field of the algorithm at each iteration and the proof of the existence of a Lyapunov function that strictly increases. It is well known that the incomplete data likelihood is a Lyapunov function relative to the SAEM mapping T. We'll show that this same function is a Lyapunov function relative to our new mapping $F_i$.\\
+Let's suppose we pick the individual $I_k$ uniformly at each iteration. Then:
+\begin{equation}
+\begin{split}
+& I_k \sim \mathcal{U}( [\![1,N]\!] )\\
+& S_{I_k}^{k} = S_{I_k}^{k-1} + \gamma_k(\St(z_{I_k}^k)-S_{I_k}^{k-1})\\
+& S_{i}^{k} = S_{i}^{k-1} \textrm{ if $i \neq I_k$}
+\end{split}
+\end{equation}
+In other words we are only updating one component of the vector of sufficient statistics at each iteration. We can also write in one line:
+\begin{equation}
+\barbelow{S}^{k} = \barbelow{S}^{k-1} + \gamma_k \delta_{I_k}\odot(\St(z^k)-\barbelow{S}^{k-1})
+\end{equation}
+
+Where $\delta_{I_k}$ is the column vector that has $1$ in position $I_k$ and $0$ elsewhere and $\odot$ is the Hadamard product.\\
+\noindent The expectation of the vector of sufficient statistics $\barbelow{S}^k = \begin{pmatrix}  
+S_1^k\\
+..\\
+S_N^k\\
+\end{pmatrix}$ gives the mean field at each iteration:
+
+\begin{equation}
+\frac{1}{N}(\bar{\barbelow{S}}^k - \barbelow{S}^{k-1})
+\end{equation}
+
+We can define the function $h$ that is the mean field of the algorithm:
+\begin{equation}
+h(\s) = \frac{1}{N}(\E(\St(z)|\hat{\theta}(\barbelow{s}))-\s)
+\end{equation}
+Where $\s = (s_1,..,s_N)^t$.\\
+Let's note $l(\theta)$ and $L(\s,\theta)$ the incomplete and the complete log likelihood.\\
+We know that $\hat{\theta}(\s)$ is a solution of the maximization of $L(\s,\theta)$, so:
+\begin{equation}
+\begin{split}
+&\partial_{\theta}L(\s,\hat{\theta}(\s)) = 0\\
+&-\partial_{\theta}\psi(\hat{\theta}(\s)) +\s^t \partial_{\theta}\phi(\hat{\theta}(\s)) = 0\\
+\end{split}
+\end{equation}
+The latter expression $\partial_{\theta}L(\s,\hat{\theta}(\s)) = 0 $ can be differentiate with respect to the vector $\s$ (under assumptions M2-M3):
+\begin{equation}
+\begin{split} 
+& \partial^2_{\theta}L(\s,\hat{\theta}(\s))\nabla_{\s}\hat{\theta}(\s) + \partial_{\theta}\phi(\hat{\theta}(\s))^t = 0\\
+& \partial^2_{\theta}L(\s,\hat{\theta}(\s))\nabla_{\s}\hat{\theta}(\s) = -\partial_{\theta}\phi(\hat{\theta}(\s))^t
+\end{split}
+\end{equation}
+
+Also the Fisher identity gives:
+\begin{equation}
+\partial_{\theta} l(\theta) = \int \partial_{\theta} \log p(y,z,\theta) p(z|y,\theta)
+\end{equation}
+written as :
+
+\begin{equation}
+\partial_{\theta} l(\theta) = -\partial_{\theta}\psi(\theta) +\bar{\s}^t\partial_{\theta}\phi(\theta)
+\end{equation}
+
+With the expression of the mean field of our algorithm found above, we are going to show that the scalar product of the Lyapunov function, classically considered as being the incomplete log likelihood, along the mean field is always negative or null. 
+\begin{equation}
+\begin{split}
+& V(\s) = -l(\hat{\theta}(\s))\\
+& h(\s) = \frac{1}{N}(\bar{\s}(\hat{\theta}(\s)) - \s)
+\end{split}
+\end{equation}
+
+A combination of the previous equalities gives:
+\begin{equation}
+\begin{split}
+\frac{1}{N}\partial_{\theta} l(\hat{\theta}(\s)) & = \underbrace{(\frac{1}{N}(\bar{\s}-\s))^t}_{h(\s)}\underbrace{\partial_{\theta}\phi(\hat{\theta}(\s))}_{-\nabla_{\s}\hat{\theta}(\s)^t\partial^2_{\theta} L(\s,\hat{\theta}(\s))}\\
+& = - h(\s)^t\nabla_{\s}\hat{\theta}(\s)^t\partial^2_{\theta} L(\s,\hat{\theta}(\s))\\
+\end{split}
+\end{equation}
+We can derive this expression with respect to the vector $\s$. The gradient of $l(\hat{\theta}(\s))$ is given by the following relation:
+
+\begin{equation}
+\begin{split}
+\frac{1}{N}\nabla_{\s} l(\hat{\theta}(\s)) & = \frac{1}{N}\partial_{\theta}l(\hat{\theta}(\s))\nabla_{\s}\hat{\theta}(\s))\\
+& = - h(\s)^t \nabla_{\s}\hat{\theta}(\s)^t\partial^2_{\theta} L(\s,\hat{\theta}(\s))\nabla_{\s}\hat{\theta}(\s)\\
+\end{split}
+\end{equation}
+
+
+The quantity of interest can be expressed as:
+
+\begin{equation}
+\begin{split}
+\langle \nabla_{\s}V(\s), h(\s) \rangle & = -\langle \nabla_{\s} l(\hat{\theta}(\s)), h(\s) \rangle\\
+& =  N h(\s)^t \nabla_{\s}\hat{\theta}(s)^t\partial^2_{\theta} L(\s,\hat{\theta}(\s))\nabla_{\s}\hat{\theta}(\s)h(\s)
+\end{split}
+\end{equation}
+And, as $\partial^2_{\theta} L(\s,\hat{\theta}(\s)) \leq 0$ we have that $\langle \nabla_{\s}V(\s), h(\s) \rangle \leq 0$ which proves \textbf{M 8}.
+
+\end{appendices}
+\end{document}
